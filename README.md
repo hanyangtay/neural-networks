@@ -1,25 +1,36 @@
+![alt text](https://github.com/hanyangtay/hanyang/raw/master/app/assets/images/personal/hy.png "Han Yang")
+
 # Neural Networks
 
-My solutions to the [Stanford CS231n course](http://cs231n.github.io/)
+To consolidate my knowledge of deep learning, I trained several neural networks over the [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset. The objective is to train a good image classifier. 
 
-![alt text](https://github.com/hanyangtay/hanyang/raw/master/app/assets/images/personal/hy.png "Han Yang")
+Optimal test accuracy: 84.6%
+
+Tools used: Python, numpy, Cython
+
+Read the following notebooks for more information: [Linear Classifiers](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb), [Fully Connected Net](https://github.com/hanyangtay/neural-networks/blob/master/Fully%20Connected%20Net.ipynb), [Convolutional Neural Network](https://github.com/hanyangtay/neural-networks/blob/master/CNN.ipynb)
 
 ## Types of ML classifiers
 
-Artifical neural networks
+#### Linear Classifiers
 
-* Convolutional Neural Network (84.6%)
+Trained linear classifiers to act as a baseline performance test.
 
-* Fully Connected Net (53.6%)
+* [k-nearest Neighbour](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb) (27.8%)
+
+* [Multiclass Support Vector Machine](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb) (37.8%)
+
+* [Softmax Classifier](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb) (37.4%)
 
 
-Linear Classifiers
+#### Artifical neural networks
 
-* k-nearest Neighbour (27.8%)
+Trained ANNs and CNNs.
 
-* Multiclass Support Vector Machine (37.8%)
+* [Convolutional Neural Network ](https://github.com/hanyangtay/neural-networks/blob/master/CNN.ipynb) (84.6%)
 
-* Softmax Classifier (37.4%)
+* [Fully Connected Net](https://github.com/hanyangtay/neural-networks/blob/master/Fully%20Connected%20Net.ipynb) (53.6%)
+
 
 
 
@@ -29,7 +40,7 @@ Linear Classifiers
 * Saving trained models using cPickle
 
 
-# Refining artificial neural networks
+#### Refining artificial neural networks
 
 * Nestarov momentum
 
@@ -38,7 +49,7 @@ Linear Classifiers
 * Adadelta
 
 
-# Recurrent neural networks
+#### Recurrent neural networks
 
 * LSTM
 
