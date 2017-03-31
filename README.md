@@ -8,7 +8,9 @@ Optimal test accuracy: 84.6%
 
 Tools used: Python, numpy, Cython
 
-Read the following notebooks for more information: [Linear Classifiers](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb), [Fully Connected Net](https://github.com/hanyangtay/neural-networks/blob/master/Fully%20Connected%20Net.ipynb), [Convolutional Neural Network](https://github.com/hanyangtay/neural-networks/blob/master/CNN.ipynb)
+Read the following notebooks for more information: 
+
+[Linear Classifiers](https://github.com/hanyangtay/neural-networks/blob/master/Baseline%20Classifiers.ipynb), [Fully Connected Net](https://github.com/hanyangtay/neural-networks/blob/master/Fully%20Connected%20Net.ipynb), [Convolutional Neural Network](https://github.com/hanyangtay/neural-networks/blob/master/CNN.ipynb)
 
 ## Types of ML classifiers
 
