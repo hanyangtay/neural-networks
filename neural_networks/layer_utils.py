@@ -1,4 +1,5 @@
 from neural_networks.layers import *
+from neural_networks.fast_layers import *
 
 def affine_relu_forward(x, w, b):
   """

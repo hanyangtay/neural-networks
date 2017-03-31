@@ -4,23 +4,32 @@ My solutions to the [Stanford CS231n course](http://cs231n.github.io/)
 
 ![alt text](https://github.com/hanyangtay/hanyang/raw/master/app/assets/images/personal/hy.png "Han Yang")
 
-## Features
+## Types of ML classifiers
 
 Artifical neural networks
 
-* Re
+* Convolutional Neural Network (84.6%)
+
+* Fully Connected Net (53.6%)
 
 
 Linear Classifiers
 
-* k-nearest Neighbour
+* k-nearest Neighbour (27.8%)
 
-* Linear Support Vector Machine
+* Multiclass Support Vector Machine (37.8%)
+
+* Softmax Classifier (37.4%)
 
 
-## What's coming:
 
-Refining artificial neural networks
+
+## Future Direction:
+
+* Saving trained models using cPickle
+
+
+# Refining artificial neural networks
 
 * Nestarov momentum
 
@@ -29,14 +38,7 @@ Refining artificial neural networks
 * Adadelta
 
 
-Convolutional neural networks
-
-* Improving design and speed of CNNs
-
-* Different architectures
-
-
-Recurrent neural networks
+# Recurrent neural networks
 
 * LSTM
 

@@ -2,8 +2,6 @@ import numpy as np
 
 from neural_networks.layers import *
 from neural_networks.layer_utils import *
-from neural_networks.layer_utils import affine_batch_relu_forward
-from neural_networks.layer_utils import affine_batch_relu_backward
 
 
 
@@ -151,10 +149,9 @@ class FullyConnectedNet(object):
 
     loss, grads = 0.0, {}
     
-    douts = [0 for i in range(L+1)] #account for the final dout 
     loss_l2 = 0
     
-    loss, douts[L] = softmax_loss(scores, y)
+    loss, dx = softmax_loss(scores, y)
     for i in range(L-1): 
       W = 'W' + str(i+1)
       loss_l2 += np.sum(self.params[W]*self.params[W])
@@ -163,7 +160,7 @@ class FullyConnectedNet(object):
     
     W_final = 'W'+str(L)
     b_final = 'b'+str(L)
-    douts[L-1], grads[W_final], grads[b_final] = affine_backward(douts[L], past_caches[L-1])
+    dx, grads[W_final], grads[b_final] = affine_backward(dx, past_caches[L-1])
     grads[W_final] += self.reg * self.params[W_final]
     
     if self.use_batchnorm:
@@ -175,9 +172,9 @@ class FullyConnectedNet(object):
           beta = 'beta' + str(ind)
           
           if self.use_dropout:
-            douts[-i-2] = dropout_backward(douts[-i-2], dropout_caches[-i-2])
+            dx = dropout_backward(dx, dropout_caches[-i-2])
 
-          douts[-i-3], grads[W], grads[b], grads[gamma], grads[beta] = affine_batch_relu_backward(douts[-i-2], past_caches[-i-2])
+          dx, grads[W], grads[b], grads[gamma], grads[beta] = affine_batch_relu_backward(dx, past_caches[-i-2])
           grads[W] += self.reg * self.params[W]
 
     else:
@@ -187,9 +184,9 @@ class FullyConnectedNet(object):
         b = 'b'+str(ind)
         
         if self.use_dropout:
-            douts[-i-2] = dropout_backward(douts[-i-2], dropout_caches[-i-2])
+            dx = dropout_backward(dx, dropout_caches[-i-2])
 
-        douts[-i-3], grads[W], grads[b] = affine_relu_backward(douts[-i-2], past_caches[-i-2])
+        dx, grads[W], grads[b] = affine_relu_backward(dx, past_caches[-i-2])
         grads[W] += self.reg * self.params[W]
 
     return loss, grads

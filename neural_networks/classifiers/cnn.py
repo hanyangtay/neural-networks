@@ -35,26 +35,34 @@ class OptimalConvNet(object):
         self.params = {}
         self.reg = reg
         self.dtype = dtype
+        self.conv_params = {'stride': 1, 'pad': (filter_size - 1) / 2}
+        self.pool_params = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
         self.bn_params = {}
 
         self.filter_size = filter_size
         self.M = len(num_filters)  # Number of weights
         self.N = len(hidden_dims)  # Number of conv/relu/pool blocks
 
+        ### Weight initialisation ###
+        
         # Size of the input
         C, H, W = input_dim
-        stride_conv = 1  # stride
+        stride_conv = self.conv_params['stride']  # stride
 
         # Initialize the weight for the conv layers
         F = [C] + num_filters
-        for i in xrange(self.M):
+        for i in range(self.M):
             ind = i + 1
 
-            self.params['W'+str(ind)] = weight_scale * np.random.randn(F[i + 1], 
-                                                                       F[i], 
-                                                                       self.filter_size, 
-                                                                       self.filter_size)
-            self.params['b' + str(ind)] = np.zeros(F[i + 1])
+            # dimension of weight (F, C, H, W)
+            # number of filters become the number of channels in the
+            # next layer (refer to slides again)
+            self.params['W'+str(ind)] = weight_scale * \
+                                        np.random.randn(F[i + 1], F[i], 
+                                                        self.filter_size, 
+                                                        self.filter_size)
+            # dimension of bias (F)
+            self.params['b'+str(ind)] = np.zeros(F[i + 1])
             
             if self.use_batchnorm:
                 bn_param = {'mode': 'train',
@@ -67,8 +75,7 @@ class OptimalConvNet(object):
         # Initialize the weights for the affine-relu layers, including last layer
   
         # Size of the last conv layer activation
-        Hconv, Wconv = self.Size_Conv(
-            stride_conv, self.filter_size, H, W, self.M)
+        Hconv, Wconv = self.size_conv(self.filter_size, H, W, self.M)
       
         dims = [Hconv * Wconv * F[-1]] + hidden_dims + [num_classes]
         
@@ -85,25 +92,39 @@ class OptimalConvNet(object):
                 self.params['beta' + str(ind)] = np.zeros(dims[i + 1])
                 self.bn_params['bn_param' + str(ind)] = bn_param
 
+        ind = self.M + self.N + 1
+        self.params['W'+str(ind)] = weight_scale * np.random.randn(dims[-2], dims[-1])
+        self.params['b'+str(ind)] = np.zeros(dims[-1])        
+                
         for k, v in self.params.iteritems():
             self.params[k] = v.astype(dtype)
 
-    def Size_Conv(self, stride_conv, filter_size, H, W, Nbconv):
-        P = (filter_size - 1) / 2  # padd
-        Hc = (H + 2 * P - filter_size) / stride_conv + 1
-        Wc = (W + 2 * P - filter_size) / stride_conv + 1
-        width_pool = 2
-        height_pool = 2
-        stride_pool = 2
-        Hp = (Hc - height_pool) / stride_pool + 1
-        Wp = (Wc - width_pool) / stride_pool + 1
-        if Nbconv == 1:
-            return Hp, Wp
-        else:
-            H = Hp
-            W = Wp
-            return self.Size_Conv(stride_conv, filter_size, H, W, Nbconv - 1)
+    def size_conv(self, filter_size, H, W, n_conv):
+        pad = self.conv_params['pad']
+        stride = self.conv_params['stride']
+        
+        HH = filter_size #filter height
+        WW = filter_size # filter width
+        
+        H_act = 1 + (H + 2*pad - HH) / stride
+        W_act = 1 + (W + 2*pad - WW) / stride
+        
+        pool_h = self.pool_params['pool_height']
+        pool_w = self.pool_params['pool_width']
+        stride_pool = self.pool_params['stride']
+        
+        H2 = 1 + (H_act - pool_h) / stride_pool
+        W2 = 1 + (W_act - pool_w) / stride_pool
+        
+        # return dimensions if it's the last conv layer
+        if n_conv == 1: 
+            return H2, W2
+        # "forward pass" into next conv layer
+        else: 
+            return self.size_conv(filter_size, H2, W2, n_conv-1)
 
+
+    
     def loss(self, X, y=None):
         """
         Evaluate loss and gradient for the three-layer convolutional network.
@@ -112,150 +133,132 @@ class OptimalConvNet(object):
         X = X.astype(self.dtype)
         mode = 'test' if y is None else 'train'
 
-        N = X.shape[0]
+        M = self.M # number of conv layers
+        N = self.N # number of linear layers
 
         # pass conv_param to the forward pass for the convolutional layer
         filter_size = self.filter_size
-        conv_param = {'stride': 1, 'pad': (filter_size - 1) / 2}
-
+        conv_param = self.conv_params
+        pool_param = self.pool_params
+        
         # pass pool_param to the forward pass for the max-pooling layer
-        pool_param = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
+        
 
         if self.use_batchnorm:
             for key, bn_param in self.bn_params.iteritems():
                 bn_param[mode] = mode
-
-        scores = None
-        
+                
         ### forward pass ###
-        all_layers = [(None, None) for i in range(self.M+self.N+1)]
         
+        #num layers = M+N+1(softmax layer)
+        past_caches = [None for i in range(M+N+1)]
+        out = X
         # Forward pass into the  M * conv layers
-        for i in range(self.M):
+        for i in range(M):
             ind = i + 1
             W = self.params['W' + str(ind)]
             b = self.params['b' + str(ind)]
-            h, _ = all_layers[ind - 1]
             if self.use_batchnorm:
-                bn_param = self.bn_params['bn_param' + str(idx)]
+                bn_param = self.bn_params['bn_param' + str(ind)]
                 gamma = self.params['gamma' + str(ind)]
                 beta = self.params['beta' + str(ind)]
-                h, cache_h = conv_bn_relu_pool_forward(
-                    h, W, b, conv_param, bn_param, gamma, beta, pool_param)
+                out, past_caches[i] = conv_bn_relu_pool_forward(
+                    out, W, b, conv_param, bn_param, gamma, beta, pool_param)
             else:
-                h, cache_h = conv_relu_pool_forward(
-                    h, W, b, conv_param, pool_param)
-            all_layers[ind] = (h, cache_h)
+                out, past_caches[i] = conv_relu_pool_forward(
+                    out, W, b, conv_param, pool_param)
 
+                
 
         # Forward pass into the N * affine-relu layers
-        all_layers[self.M] = h.reshape(N, np.product(h.shape[1:])), cache_h
-        for i in range(self.N):
-            ind = self.M + i + 1
-            h, _ = all_layers[ind - 1]
+        N_c, F, H, W = out.shape
+        original_shape = out.shape
+        out = out.reshape(N_c, F*H*W)
+
+        for i in range(M, M+N):
+            ind = i + 1
             W = self.params['W' + str(ind)]
             b = self.params['b' + str(ind)]
             if self.use_batchnorm:
-                bn_param = self.bn_params['bn_param' + str(idx)]
+                bn_param = self.bn_params['bn_param' + str(ind)]
                 gamma = self.params['gamma' + str(ind)]
                 beta = self.params['beta' + str(ind)]
-                h, cache_h = affine_batch_relu_forward(h, W, b, gamma,
+                out, past_caches[i] = affine_batch_relu_forward(out, W, b, gamma,
                                                       beta, bn_param)
             else:
-                h, cache_h = affine_relu_forward(h, W, b)
-            all_layers[ind] = (h, cache_h)
+                out, past_caches[i] = affine_relu_forward(out, W, b)
 
         # Forward pass into the last affine - softmax layer
-        ind = self.M + self.N + 1
+        ind = M+N+1
         W = self.params['W' + str(ind)]
         b = self.params['b' + str(ind)]
-        h,_ = all_layers[ind-1]
-        h, cache_h = affine_forward(h, w, b)
-        all_layers[ind] = (h, cache_h)
-
-        scores = h
+        scores, past_caches[M+N] = affine_forward(out, W, b)
 
         if y is None:
             return scores
 
-        loss, grads = 0, {}
         
-        ### Backward pass ###
-
-        douts = [0 for i in range(self.L+self.M+1)] #account for the final dout 
+        
+        ### Loss Calculation ###
+        
+        loss, grads = 0, {}
         loss_l2 = 0
-
-        loss, douts[self.L+self.M] = softmax_loss(scores, y)
-        for i in range(self.L+self.M): 
+        loss, dx = softmax_loss(scores, y)
+        for i in range(M+N+1): 
           W = 'W' + str(i+1)
           loss_l2 += np.sum(self.params[W]*self.params[W])
         loss_l2 *= 0.5 * self.reg
         loss += loss_l2
 
+        ### Backpropagation ###        
+        
+        W = "W" + str(M+N+1)
+        b = "b" + str(M+N+1)
+        dx, grads[W], grads[b] = affine_backward(dx, past_caches[-1])
+        grads[W] += self.reg * self.params[W]
 
-        # Backward pass
-        # print 'Backward pass'
-        # Backprop into the scoring layer
-        idx = self.L + self.M + 1
-        dh = dscores
-        h_cache = blocks['cache_h' + str(idx)]
-        dh, dw, db = affine_backward(dh, h_cache)
-        blocks['dh' + str(idx - 1)] = dh
-        blocks['dW' + str(idx)] = dw
-        blocks['db' + str(idx)] = db
-
-        # Backprop into the linear blocks
-        for i in range(self.M)[::-1]:
-            idx = self.L + i + 1
-            dh = blocks['dh' + str(idx)]
-            h_cache = blocks['cache_h' + str(idx)]
-            if self.use_batchnorm:
-                dh, dw, db, dgamma, dbeta = affine_norm_relu_backward(
-                    dh, h_cache)
-                blocks['dbeta' + str(idx)] = dbeta
-                blocks['dgamma' + str(idx)] = dgamma
-            else:
-                dh, dw, db = affine_relu_backward(dh, h_cache)
-            blocks['dh' + str(idx - 1)] = dh
-            blocks['dW' + str(idx)] = dw
-            blocks['db' + str(idx)] = db
-
-        # Backprop into the conv blocks
-        for i in range(self.L)[::-1]:
-            idx = i + 1
-            dh = blocks['dh' + str(idx)]
-            h_cache = blocks['cache_h' + str(idx)]
-            if i == max(range(self.L)[::-1]):
-                dh = dh.reshape(*blocks['h' + str(idx)].shape)
-            if self.use_batchnorm:
-                dh, dw, db, dgamma, dbeta = conv_norm_relu_pool_backward(
-                    dh, h_cache)
-                blocks['dbeta' + str(idx)] = dbeta
-                blocks['dgamma' + str(idx)] = dgamma
-            else:
-                dh, dw, db = conv_relu_pool_backward(dh, h_cache)
-            blocks['dh' + str(idx - 1)] = dh
-            blocks['dW' + str(idx)] = dw
-            blocks['db' + str(idx)] = db
-
-        # w gradients where we add the regulariation term
-        list_dw = {key[1:]: val + self.reg * self.params[key[1:]]
-                   for key, val in blocks.iteritems() if key[:2] == 'dW'}
-        # Paramerters b
-        list_db = {key[1:]: val for key, val in blocks.iteritems() if key[:2] ==
-                   'db'}
-        # Parameters gamma
-        list_dgamma = {key[1:]: val for key, val in blocks.iteritems() if key[
-            :6] == 'dgamma'}
-        # Paramters beta
-        list_dbeta = {key[1:]: val for key, val in blocks.iteritems() if key[
-            :5] == 'dbeta'}
-
-        grads = {}
-        grads.update(list_dw)
-        grads.update(list_db)
-        grads.update(list_dgamma)
-        grads.update(list_dbeta)
+        
+        if self.use_batchnorm:
+          for i in range(N):
+            ind = M+N - i
+            W = "W" + str(ind)
+            b = "b" + str(ind)
+            gamma = 'gamma' + str(ind)
+            beta = 'beta' + str(ind)
+            
+            dx, grads[W], grads[b], grads[gamma], grads[beta] = \
+              affine_batch_relu_backward(dx, past_caches[-i-2])
+              
+            grads[W] += self.reg * self.params[W]
+          
+          dx = dx.reshape(original_shape)
+          
+          for i in range(M):
+            ind = M - i
+            W = "W" + str(ind)
+            b = "b" + str(ind)
+            gamma = 'gamma' + str(ind)
+            beta = 'beta' + str(ind)
+            dx, grads[W], grads[b], grads[gamma], grads[beta] = \
+              conv_bn_relu_pool_backward(dx, past_caches[-i-N-2])
+            grads[W] += self.reg * self.params[W]
+            
+        else:  
+          for i in range(N):
+            ind = M+N - i
+            W = "W" + str(ind)
+            b = "b" + str(ind)
+            
+            dx, grads[W], grads[b] = affine_relu_backward(dx, past_caches[-i-2])
+            grads[W] += self.reg * self.params[W]
+          
+          for i in range(M):
+            ind = M - i
+            W = "W" + str(ind)
+            b = "b" + str(ind)
+            dx, grads[W], grads[b] = conv_relu_pool_backward(dx, 
+                                                             past_caches[-i-N-2])
+            grads[W] += self.reg * self.params[W]
 
         return loss, grads
   
@@ -293,16 +296,8 @@ class ThreeLayerConvNet(object):
     self.reg = reg
     self.dtype = dtype
     
-    ############################################################################
-    # TODO: Initialize weights and biases for the three-layer convolutional    #
-    # network. Weights should be initialized from a Gaussian with standard     #
-    # deviation equal to weight_scale; biases should be initialized to zero.   #
-    # All weights and biases should be stored in the dictionary self.params.   #
-    # Store weights and biases for the convolutional layer using the keys 'W1' #
-    # and 'b1'; use keys 'W2' and 'b2' for the weights and biases of the       #
-    # hidden affine layer, and keys 'W3' and 'b3' for the weights and biases   #
-    # of the output affine layer.                                              #
-    ############################################################################
+
+    ### Initialise weights ###
 
     C, H, W = input_dim
     F = num_filters
@@ -328,10 +323,6 @@ class ThreeLayerConvNet(object):
     self.params['b2'] = np.zeros(hidden_dim)
     self.params['W3'] = np.random.randn(hidden_dim, num_classes)*weight_scale
     self.params['b3'] = np.zeros(num_classes)
-
-    ############################################################################
-    #                             END OF YOUR CODE                             #
-    ############################################################################
 
     for k, v in self.params.iteritems():
       self.params[k] = v.astype(dtype)
@@ -366,6 +357,7 @@ class ThreeLayerConvNet(object):
     scores, cache = affine_forward(fc_out, W3, b3)
     
     if y is None:
+      print scores.shape
       return scores
     
     loss, grads = 0, {}

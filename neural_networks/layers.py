@@ -383,10 +383,7 @@ def conv_backward(dout, cache):
               dx[n, :, row+k, col+l] += dout[n,f,i,j] * w[f,:,k,l]
               
   dx = dx[:,:,pad:-pad, pad:-pad]
-
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  
   return dx, dw, db
 
 
@@ -427,7 +424,7 @@ def max_pool_forward(x, pool_param):
   return out, cache
 
 
-def max_pool_backward_naive(dout, cache):
+def max_pool_backward(dout, cache):
   """
   A naive implementation of the backward pass for a max pooling layer.
 
@@ -488,17 +485,12 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   - out: Output data, of shape (N, C, H, W)
   - cache: Values needed for the backward pass
   """
-  out, cache = None, None
 
   N, C, H, W = x.shape
-  cache = [0 for i in range(C)]
-  x = np.reshape(x, (N, C, H*W))
-  out = np.zeros_like(x)
+  x = x.transpose(0,2,3,1).reshape(N*H*W, C)
+  out, cache = batchnorm_forward(x, gamma, beta, bn_param)
+  out = out.reshape(N, H, W, C).transpose(0, 3, 1, 2)
   
-  for c in range(C):
-    out[:,c], cache[c] = batchnorm_forward(x[:,c], gamma[c], beta[c], bn_param)
-  out = np.reshape(out, (N, C, H, W))
-
   return out, cache
 
 
@@ -517,18 +509,10 @@ def spatial_batchnorm_backward(dout, cache):
   """
 
   N, C, H, W = dout.shape
-  dout = np.reshape(dout, (N, C, H*W))
+  dout = dout.transpose(0,2,3,1).reshape(N*H*W, C)
   
-  dx = np.zeros_like(dout)
-  dgamma = np.zeros(C)
-  dbeta=np.zeros(C)
-  
-  for c in range(C):
-    dx[:,c], dgamma_temp, dbeta_temp = batchnorm_backward(dout[:,c], cache[c])
-    dgamma[c] = np.sum(dgamma_temp)
-    dbeta[c] = np.sum(dbeta_temp)
-    
-  dx = np.reshape(dx, (N, C, H, W))
+  dx, dgamma, dbeta = batchnorm_backward(dout, cache)
+  dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
 
   return dx, dgamma, dbeta
   
