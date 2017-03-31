@@ -6,6 +6,10 @@ To consolidate my knowledge of deep learning from the [Stanford CS231n course](h
 
 These neural networks were trained overnight on my Macbook Pro. Limited by computing power, I was not able to fine-tune my hyperparameters to achieve the best possible result, or to train deep architectures efficiently. Using heuristics and seeing the trend of loss, training accuracy and validation accuracy over the training periods, I manually tuned the learning rates and regularisation rates. 
 
+Tools used: Python, numpy, Cython, Jupyter
+
+## Best ConvNet Model
+
 The best single model is a CNN which achieved a **79.8% test accuracy** over the 1000 images. Its architecture is relatively simple.
 
 There is a conv composite layer comprising of a convolutional layer that uses 128 3x3 filters, spatial batchnormalisation layer, ReLU layer and max pooling layer. There is another fully connected layer comprising of a simple affine transformation layer and a ReLU activation layer. This CNN has 3 conv composite layers, 2 fully connected layers and a final softmax loss layer. In summary, this is the architecture:
@@ -16,8 +20,6 @@ There is a conv composite layer comprising of a convolutional layer that uses 12
 Using an ensemble of 3 CNN models with varying architectures, I managed to boost test accuracy by 4%. 
 
 **Optimal test accuracy: 84.6%**
-
-Tools used: Python, numpy, Cython
 
 Read the following notebooks for more information: 
 
